@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<style>
+    li{
+        list-style: none;
+        display: inline-block;
+        width: 30px;
+        height: 30px;
+        text-align: center;
+        line-height: 30px;
+        color: blue;
+        background-color: #eee;
+        border-radius: 20px;
+        cursor: pointer;
+        margin-right: 10px;
+    }
+    .current{
+        background-color: blue;
+        color: white;
+    }
+</style>
+<body>
+    <div id="app">
+        <p><input type="button" value="新增员工" @click="isShow=true"><input type="button" value="批量删除" @click="batchDel()"></p>
+        <table border="1" cellspacing="0" width="600px">
+            <thead>
+                <tr>
+                    <td><input type="checkbox" v-model="isCheckAll" @click="checkAll()"></td>
+                    <td>编号</td>
+                    <td>姓名</td>
+                    <td>性别</td>
+                    <td>生日</td>
+                    <td>等级</td>
+                    <td>联系方式</td>
+                    <td>操作</td>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="item in empList">
+                    <td><input type="checkbox" v-bind:value="item.id" v-model="checkIds" @click="other(item.id)"></td>
+                    <td>{{item.id}}</td>
+                    <td>{{item.name}}</td>
+                    <td>{{item.gender}}</td>
+                    <td>{{item.birth}}</td>
+                    <td>{{item.level}}</td>
+                    <td>{{item.mobile}}</td>
+                    <td><input type="button" value="删除" @click="delEmp(item.id)"></td>
+                </tr>
+            </tbody>
+            
+        </table>
+        <ul>
+            <li :class="{current:currentPage===i}" v-for="i in pageCount" @click="changePage(i)">{{i}}</li>
+        </ul>
+        <form v-show="isShow">
+            <p>姓名<input type="text" v-model="employee.name"></p>
+            <p><input type="radio" value="男" v-model="employee.gender" name="male" id="male" checked><label for="male">男</label>
+                <input type="radio" value="女" v-model="employee.gender" name="male" id="female"><label for="female">女</label>
+            </p>
+            <p>出生<input type="date" v-model="employee.birth"></p>
+            <p>等级
+               <select >
+                <option value="jk">京卡</option>
+                <option value="yk">银卡</option>
+                <option value="tk">铜卡</option>
+                <option value="pt">普通</option>
+               </select>
+            </p>
+            <p><input type="button" value="保存" @click="saveEmp()"></p>
+        </form>
+    </div>
+    <script src="js/axios.min.js"></script>
+    <script src="js/vue.js"></script>
+    <script>
+        new Vue({
+            el:"#app",
+            data:{
+                empList:[],
+                pageCount:1,
+                pageNum:1,
+                currentPage:1,
+                employee:{
+                    name:"",
+                    gender:"男",
+                    birth:"",
+                    level:"",
+                    mobile:""
+                },
+                depList:{},
+                isShow:false,
+                isCheckAll:false,
+                checkIds:[]
+
+            },
+            methods: {
+                batchDel(){
+                    var result=confirm("确认要删除"+this.checkIds+"的员工吗");
+                    if(!result){
+                        return
+                    }
+                    axios({
+                        url:"http://localhost:8080/java03/batchDel",
+                        method:"get",
+                        params:{
+                            ids:this.checkIds.join(",")
+                        }
+                    }).then((response)=>{
+                        if(response.data==="success"){
+                            // alert("删除成功")
+                            this.showEmps()
+                        }
+                    })
+                },
+                other(id){                   
+                    this.isCheckAll=false 
+                                                   
+                },
+                checkAll(){
+                    
+                    if(!this.isCheckAll){
+                        for(var i=0;i<this.empList.length;i++){
+                            // console.log(this.isCheckAll)
+                            if(this.checkIds.indexOf(this.empList[i].id)===-1){
+                                this.checkIds.push(this.empList[i].id)
+                            }                           
+                        }
+                    }else{
+                        this.checkIds=[];
+                        
+                    }
+                    // console.log(this.isCheckAll)
+                    console.log(this.checkIds)
+                    // for(var i=0;i<this.empList.length;i++){
+                    //     if(this.empList[i].id!=this.checkIds)
+                    // }
+
+                },
+                delEmp(id){
+                    var result=confirm("确认要删除"+id+"的员工吗")
+                    if(!result){
+                        return
+                    }
+                    axios({
+                        url:"http://localhost:8080/java03/delEmp",
+                        params:{
+                            id:id
+                        },
+                    }).then((response)=>{
+                        console.log(response.data)
+                        if(response.data==="success"){
+                            // alert("删除成功")
+                            this.showEmps()
+                        }
+                    })
+                },
+                saveEmp(){
+                    var that=this
+                    axios({
+                        url:"http://localhost:8080/java03/saveEmp",
+                        method:"post",
+                        data:this.employee
+                    }).then(function (response){
+                        console.log(response.data)
+                        if(response.data==="success"){
+                            alert("添加成功")
+                            that.isShow=false
+                            that.employee={
+                            name:"",
+                            gender:"男",
+                            birth:"",
+                            
+                            }           
+                        }
+                    })
+                },
+                getDeptList(){
+                    var that=this
+                    axios({
+                        url:"http://localhost:8080/java03/selectDep",
+                        method:"get",
+
+                    }).then(function (response){
+                        that.depList=response.data
+                        console.log(response)
+                    })
+                },
+                
+                changePage(page){
+                    this.pageNum=page
+                    this.showEmps()
+
+                },
+                showEmps(){
+                    var that=this
+                    axios({
+                        url:"http://localhost:8080/java03/findAll",
+                        method:"get",
+                        params:{
+                            pageNum:this.pageNum,
+                            pageSize:4
+                        }                         
+                    }).then(function(response){
+                        console.log("111")
+                        console.log(response.data)
+                        that.empList=response.data.empList
+                        that.pageCount=response.data.pageCount                        
+                        that.currentPage=response.data.currentPage
+                                                                        
+                    })
+                },
+                
+            },
+            created() {
+                this.showEmps();
+                // this.getDeptList();
+            
+            },
+
+        })
+    </script>
+</body>
+</html>
